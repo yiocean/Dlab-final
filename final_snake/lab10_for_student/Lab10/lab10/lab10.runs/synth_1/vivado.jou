@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2024.1 (64-bit)
+# SW Build 5076996 on Wed May 22 18:37:14 MDT 2024
+# IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+# SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+# Start of session at: Fri Dec  6 20:09:07 2024
+# Process ID: 10408
+# Current directory: C:/Users/User/Desktop/NYCU_3rd/DLab/final/Dlab-final/final_snake/lab10_for_student/Lab10/lab10/lab10.runs/synth_1
+# Command line: vivado.exe -log lab10.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source lab10.tcl
+# Log file: C:/Users/User/Desktop/NYCU_3rd/DLab/final/Dlab-final/final_snake/lab10_for_student/Lab10/lab10/lab10.runs/synth_1/lab10.vds
+# Journal file: C:/Users/User/Desktop/NYCU_3rd/DLab/final/Dlab-final/final_snake/lab10_for_student/Lab10/lab10/lab10.runs/synth_1\vivado.jou
+# Running On        :LAPTOP-M725J2IQ
+# Platform          :Windows Server 2016 or Windows 10
+# Operating System  :19045
+# Processor Detail  :Intel(R) Core(TM) i5-8265U CPU @ 1.60GHz
+# CPU Frequency     :1800 MHz
+# CPU Physical cores:4
+# CPU Logical cores :8
+# Host memory       :8379 MB
+# Swap memory       :7784 MB
+# Total Virtual     :16163 MB
+# Available Virtual :7154 MB
+#-----------------------------------------------------------
+source lab10.tcl -notrace
