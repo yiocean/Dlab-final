@@ -1,0 +1,26 @@
+#-----------------------------------------------------------
+# Vivado v2024.1 (64-bit)
+# SW Build 5076996 on Wed May 22 18:37:14 MDT 2024
+# IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+# SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+# Start of session at: Sun Dec  8 22:00:01 2024
+# Process ID: 26832
+# Current directory: D:/NYCU/113-1/DCD Lab/Final Project/lab10_for_student/Lab10/lab10
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent35364 D:\NYCU\113-1\DCD Lab\Final Project\lab10_for_student\Lab10\lab10\lab10.xpr
+# Log file: D:/NYCU/113-1/DCD Lab/Final Project/lab10_for_student/Lab10/lab10/vivado.log
+# Journal file: D:/NYCU/113-1/DCD Lab/Final Project/lab10_for_student/Lab10/lab10\vivado.jou
+# Running On        :MSI
+# Platform          :Windows Server 2016 or Windows 10
+# Operating System  :22631
+# Processor Detail  :Intel(R) Core(TM) Ultra 7 155H
+# CPU Frequency     :2995 MHz
+# CPU Physical cores:16
+# CPU Logical cores :22
+# Host memory       :34038 MB
+# Swap memory       :6442 MB
+# Total Virtual     :40481 MB
+# Available Virtual :18709 MB
+#-----------------------------------------------------------
+start_gui
+open_project {D:/NYCU/113-1/DCD Lab/Final Project/lab10_for_student/Lab10/lab10/lab10.xpr}
+update_compile_order -fileset sources_1
