@@ -17,83 +17,7 @@ module walk(
     output [3:0] VGA_GREEN,
     output [3:0] VGA_BLUE
 );
-// ====================== Sram Logic ========================
-// Declare the video buffer size
-localparam BUF_W = 160; // background buffer width
-localparam BUF_H = 120; // background buffer height
-localparam BUF_W_1 = 160; // background buffer width
-localparam BUF_H_1 = 120; // background buffer height
-localparam BUF_FOOD_W =5;
-localparam BUF_FOOD_H =5;
-// declare SRAM control signals
-wire [16:0] bg_sram_addr_0; // start
-wire [16:0] bg_sram_addr_1;
-wire [11:0] data_in;
-wire [11:0] bg_data_out_0;
-wire [11:0] bg_data_out_1, bg_data_out_2, bg_data_out_3, bg_data_out_win, bg_data_out_lose;//, bg_data_out_food;
-wire        sram_we_0, sram_en_0;
-wire        sram_we_1, sram_en_1;
-reg  [17:0] bg_pixel_addr_0, bg_pixel_addr_1;
-  
-wire [9:0] pixel_x;   // x coordinate of the next pixel (between 0 ~ 159) // for VGA
-wire [9:0] pixel_y;   // y coordinate of the next pixel (between 0 ~ 119) // for VGA
 
-// The following code describes an initialized SRAM memory block that
-// stores a 320x240 12-bit seabed image, plus two 64x32 fish images.
-
-// sram for background 0
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W*BUF_H), .FILE("start_bg.mem"))
-  ram0 (.clk(clk), .we(sram_we_0), .en(sram_en_0),
-          .addr(bg_sram_addr_0), .data_i(data_in_0), .data_o(bg_data_out_0));
-// sram for background 1
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg1.mem"))
-  ram1 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_1));
-          
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg2.mem"))
-  ram2 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_2));
-
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg3.mem"))
-  ram3 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_3));
-          
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg_win.mem"))
-  ram4 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_win));
-
-sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg_lose.mem"))
-  ram5 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_lose));
-
-//sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_FOOD_W*BUF_FOOD_H), .FILE("food.mem"))
-//  ram6 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
-//          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_food));
-          
-assign sram_we_0 = usr_btn[2] && usr_btn[1]; // In this demo, we do not write the SRAM. However, if
-                             // you set 'sram_we' to 0, Vivado fails to synthesize
-                             // ram0 as a BRAM -- this is a bug in Vivado.
-assign sram_we_1 = usr_btn[3] && usr_btn[0]; // In this demo, we do not write the SRAM. However, if
-                             // you set 'sram_we' to 0, Vivado fails to synthesize
-                             // ram0 as a BRAM -- this is a bug in Vivado.
-assign sram_en_0 = 1;          // Here, we always enable the SRAM block.
-assign sram_en_1 = 1;          // Here, we always enable the SRAM block.
-assign bg_sram_addr_1 = bg_pixel_addr_1;
-assign bg_sram_addr_0 = bg_pixel_addr_0;
-assign data_in_0 = 12'h000; // SRAM is read-only so we tie inputs to zeros.
-assign data_in_1 = 12'h000; // SRAM is read-only so we tie inputs to zeros.
-// ====================== Background ========================
-always @ (posedge clk) begin
-  if (~reset_n) begin
-    bg_pixel_addr_0 <= 0;
-    bg_pixel_addr_1 <= 0;
-  end else begin
-        // Scale up a 320x240 image for the 640x480 display.
-        // (pixel_x, pixel_y) ranges from (0,0) to (639, 479)
-        bg_pixel_addr_0 <= (pixel_y >> 2) * BUF_W + (pixel_x >> 2);
-        bg_pixel_addr_1 <= (pixel_y >> 2) * BUF_W + (pixel_x >> 2);
-    end
-end
 // ====================== Body Length =======================
 wire [3:0] body_show; // 0-indexed
 assign body_show = ~usr_sw; // check
@@ -168,28 +92,156 @@ final score_cal (
 assign usr_led[0] = food1_eaten;
 assign usr_led[1] = food2_eaten;
 assign usr_led[2] = food3_eaten;
-// ========================== food region logic ==============
+
+// ====================== Sram Logic ========================
+// Declare the video buffer size
+localparam BUF_W = 160; // background buffer width
+localparam BUF_H = 120; // background buffer height
+localparam BUF_W_1 = 160; // background buffer width
+localparam BUF_H_1 = 120; // background buffer height
+localparam BUF_FOOD_W =5;
+localparam BUF_FOOD_H =5;
+localparam BUF_SCORE_W =20;
+localparam BUF_SCORE_H =20;
+// declare SRAM control signals
+wire [16:0] bg_sram_addr_0; // start
+wire [16:0] bg_sram_addr_1;
+wire [ 4:0] food1_sram_addr, food2_sram_addr, food3_sram_addr;
+wire [10:0] score_sram_addr;
+wire [11:0] data_in;
+wire [11:0] bg_data_out_0;
+wire [11:0] bg_data_out_1, bg_data_out_2, bg_data_out_3, bg_data_out_win, bg_data_out_lose, data_out_food1, data_out_food2, data_out_food3, bg_data_out_score;
+wire        sram_we_0, sram_en_0;
+wire        sram_we_1, sram_en_1;
+reg [17:0] bg_pixel_addr_0, bg_pixel_addr_1;
+reg [ 4:0] food1_pixel_addr, food2_pixel_addr, food3_pixel_addr;
+reg [10:0] score_pixel_addr;
+  
+wire [9:0] pixel_x;   // x coordinate of the next pixel (between 0 ~ 159) // for VGA
+wire [9:0] pixel_y;   // y coordinate of the next pixel (between 0 ~ 119) // for VGA
 wire food1_region, food2_region, food3_region;
+// The following code describes an initialized SRAM memory block that
+// stores a 320x240 12-bit seabed image, plus two 64x32 fish images.
 
-assign food1_region =(food1_x >  1)&&(food1_y >  1)  &&
-                     (food1_x < 23)&&(food1_y < 23) && (!food1_eaten) &&
-                     ((pixel_x >= food1_x*20) && (pixel_x < 20*(food1_x + 10))) &&
-                     ((pixel_y >= food1_y*20) && (pixel_y < 20*(food1_y + 10)));
+// sram for background 0
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W*BUF_H), .FILE("start_bg.mem"))
+  ram0 (.clk(clk), .we(sram_we_0), .en(sram_en_0),
+          .addr(bg_sram_addr_0), .data_i(data_in_0), .data_o(bg_data_out_0));
+// sram for background 1
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg1.mem"))
+  ram1 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_1));
+          
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg2.mem"))
+  ram2 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_2));
 
-assign food2_region =(food2_x > 1)&&(food2_y > 1)  &&
-                     (food2_x < 23)&&(food2_y < 23) && (!food2_eaten) && 
-                     ((pixel_x >= food2_x*20) && (pixel_x < 20*(food2_x + 10))) &&
-                     ((pixel_y >= food2_y*20) && (pixel_y < 20*(food2_y + 10)));
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg3.mem"))
+  ram3 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_3));
+          
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg_win.mem"))
+  ram4 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_win));
 
-assign food3_region =(food3_x >  1)&&(food3_y >  1) &&
-                     (food3_x < 23)&&(food3_y < 23) && (!food3_eaten) && 
-                     ((pixel_x >= food3_x*20) && (pixel_x < 20*(food3_x + 10))) &&
-                     ((pixel_y >= food3_y*20) && (pixel_y < 20*(food3_y + 10)));
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_W_1*BUF_H_1), .FILE("game_bg_lose.mem"))
+  ram5 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(bg_sram_addr_1), .data_i(data_in_1), .data_o(bg_data_out_lose));
 
-wire food_region = (food1_region | food2_region | food3_region);
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_FOOD_W*BUF_FOOD_H), .FILE("food.mem"))
+  ram6 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(food1_sram_addr), .data_i(data_in_1), .data_o(data_out_food1));
 
-wire score_region = ((pixel_x >= 260*2) & (pixel_x <= (260+41)*2) &
-                     (pixel_y >= 45 *2) & (pixel_y <= ( 45+41)*2));
+
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_SCORE_W*BUF_SCORE_H*4), .FILE("score.mem"))
+  ram7 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(score_sram_addr), .data_i(data_in_1), .data_o(bg_data_out_score));
+
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_FOOD_W*BUF_FOOD_H), .FILE("food.mem"))
+  ram8 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(food2_sram_addr), .data_i(data_in_1), .data_o(data_out_food2));
+
+sram #(.DATA_WIDTH(12), .ADDR_WIDTH(18), .RAM_SIZE(BUF_FOOD_W*BUF_FOOD_H), .FILE("food.mem"))
+  ram9 (.clk(clk), .we(sram_we_1), .en(sram_en_1),
+          .addr(food3_sram_addr), .data_i(data_in_1), .data_o(data_out_food3));
+assign sram_we_0 = usr_btn[2] && usr_btn[1]; // In this demo, we do not write the SRAM. However, if
+                             // you set 'sram_we' to 0, Vivado fails to synthesize
+                             // ram0 as a BRAM -- this is a bug in Vivado.
+assign sram_we_1 = usr_btn[3] && usr_btn[0]; // In this demo, we do not write the SRAM. However, if
+                             // you set 'sram_we' to 0, Vivado fails to synthesize
+                             // ram0 as a BRAM -- this is a bug in Vivado.
+assign sram_en_0 = 1;          // Here, we always enable the SRAM block.
+assign sram_en_1 = 1;          // Here, we always enable the SRAM block.
+assign bg_sram_addr_1 = bg_pixel_addr_1;
+assign bg_sram_addr_0 = bg_pixel_addr_0;
+assign food1_sram_addr = food1_pixel_addr;
+assign food2_sram_addr = food2_pixel_addr;
+assign food3_sram_addr = food3_pixel_addr;
+assign score_sram_addr = score_pixel_addr;
+assign data_in_0 = 12'h000; // SRAM is read-only so we tie inputs to zeros.
+assign data_in_1 = 12'h000; // SRAM is read-only so we tie inputs to zeros.
+// ====================== Background ========================
+always @ (posedge clk) begin
+  if (~reset_n) begin
+    bg_pixel_addr_0  <= 0;
+    bg_pixel_addr_1  <= 0;
+    food1_pixel_addr <= 0;
+    food2_pixel_addr <= 0;
+    food3_pixel_addr <= 0;
+    score_pixel_addr <= 0;
+  end else begin
+        // Scale up a 320x240 image for the 640x480 display.
+        // (pixel_x, pixel_y) ranges from (0,0) to (639, 479)
+        bg_pixel_addr_0 <= (pixel_y >> 2) * BUF_W + (pixel_x >> 2);
+        bg_pixel_addr_1 <= (pixel_y >> 2) * BUF_W + (pixel_x >> 2);
+        food1_pixel_addr <= ((pixel_y - food1_y*20) >> 2) * 5 + ((pixel_x - food1_x*20) >> 2);
+        food2_pixel_addr <= ((pixel_y - food2_y*20) >> 2) * 5 + ((pixel_x - food2_x*20) >> 2);
+        food3_pixel_addr <= ((pixel_y - food3_y*20) >> 2) * 5 + ((pixel_x - food3_x*20) >> 2);
+        case (score)
+          0      : score_pixel_addr <=         ((pixel_y - 90) >> 2) * 20 + ((pixel_x - 520) >> 2);
+          1      : score_pixel_addr <= 400   + ((pixel_y - 90) >> 2) * 20 + ((pixel_x - 520) >> 2);
+          2      : score_pixel_addr <= 400*2 + ((pixel_y - 90) >> 2) * 20 + ((pixel_x - 520) >> 2);
+          3      : score_pixel_addr <= 400*3 + ((pixel_y - 90) >> 2) * 20 + ((pixel_x - 520) >> 2);
+          default: score_pixel_addr <=         ((pixel_y - 90) >> 2) * 20 + ((pixel_x - 520) >> 2);
+        endcase
+    end
+end
+// ========================== food region logic ==============
+
+//assign food1_region =(food1_x >  1)&&(food1_y >  1)  &&
+//                     (food1_x < 23)&&(food1_y < 23) && (!food1_eaten) &&
+//                     ((pixel_x >= food1_x*20) && (pixel_x < 20*(food1_x + 1))) &&
+//                     ((pixel_y >= food1_y*20) && (pixel_y < 20*(food1_y + 1)));
+//
+//assign food2_region =(food2_x > 1)&&(food2_y > 1)  &&
+//                     (food2_x < 23)&&(food2_y < 23) && (!food2_eaten) && 
+//                     ((pixel_x >= food2_x*20) && (pixel_x < 20*(food2_x + 1))) &&
+//                     ((pixel_y >= food2_y*20) && (pixel_y < 20*(food2_y + 1)));
+//
+//assign food3_region =(food3_x >  1)&&(food3_y >  1) &&
+//                     (food3_x < 23)&&(food3_y < 23) && (!food3_eaten) && 
+//                     ((pixel_x >= food3_x*20) && (pixel_x < 20*(food3_x + 1))) &&
+//                     ((pixel_y >= food3_y*20) && (pixel_y < 20*(food3_y + 1)));
+//
+assign food1_region = (!food1_eaten) &&
+                     ((pixel_x >= food1_x*20) && (pixel_x < 20*(food1_x + 1))) &&
+                     ((pixel_y >= food1_y*20) && (pixel_y < 20*(food1_y + 1)));
+
+assign food2_region = (!food2_eaten) && 
+                     ((pixel_x >= food2_x*20) && (pixel_x < 20*(food2_x + 1))) &&
+                     ((pixel_y >= food2_y*20) && (pixel_y < 20*(food2_y + 1)));
+
+assign food3_region = (!food3_eaten) && 
+                     ((pixel_x >= food3_x*20) && (pixel_x < 20*(food3_x + 1))) &&
+                     ((pixel_y >= food3_y*20) && (pixel_y < 20*(food3_y + 1)));
+
+//wire food_region = (food1_region | food2_region | food3_region);
+
+//wire score_region = ((pixel_x >= 260*2) & (pixel_x <= (260+41)*2) &
+//                     (pixel_y >= 45 *2) & (pixel_y <= ( 45+41)*2));
+
+wire score_region = ((pixel_x >= 260*2) & (pixel_x < (260+40)*2) &
+                     (pixel_y >= 45 *2) & (pixel_y < ( 45+40)*2));
 // =======================================================================
 // FSM to control directions
 localparam [2:0] S_START = 0, S_GAME = 1;//,S_DOWN = 2,S_LEFT = 3,S_RIGHT = 4;
@@ -395,12 +447,18 @@ always @(*) begin
     rgb_next = bg_data_out_win;
   end else if (P_score == 'd7) begin // lose
     rgb_next = bg_data_out_lose;
+  end else if(score_region)begin
+    rgb_next = bg_data_out_score;
   end else if (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[1],snake_y[1]) | is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[2],snake_y[2]) | is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[3],snake_y[3]) | is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[4],snake_y[4]) | (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[5],snake_y[5]) & body_show[0]) | (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[6],snake_y[6]) & body_show[1]) | (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[7],snake_y[7]) & body_show[2]) | (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[8],snake_y[8]) & body_show[3])) begin
     rgb_next = 12'h3a4;
   end else if (is_in_a_grid(pixel_x>>2,pixel_y>>2,snake_x[0],snake_y[0])) begin
     rgb_next = 12'h163;
-//  end else if ((food1_region && !food1_eaten) || (food2_region && !food2_eaten) || (food3_region && !food3_eaten)) begin
-//    rgb_next = bg_data_out_food;
+  end else if (food1_region) begin
+    rgb_next = data_out_food1;
+  end else if (food2_region) begin
+    rgb_next = data_out_food2;
+  end else if (food3_region) begin
+    rgb_next = data_out_food3;
   end else if(level == 2'b01) begin // background
     rgb_next = bg_data_out_1; //12'h000;
   end else if(level == 2'b10) begin
